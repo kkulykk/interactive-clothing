@@ -201,74 +201,138 @@ int main(void)
   {
 
 	  // right turn signal
-	  for (int j = 0; j < 3; j++) {
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 255, 40, 0);
-			  Set_Brightness(45);
-			  WS2812_Send();
-			  HAL_Delay(20);
-		  }
+//	  for (int j = 0; j < 3; j++) {
+//		  for (int i = 0; i < 30; i++) {
+//			  Set_LED(i, 150, 40, 70);
+//			  Set_Brightness(45);
+//			  WS2812_Send();
+//			  HAL_Delay(20);
+//		  }
+//
+//		  for (int i = 0; i < 30; i++) {
+//			  Set_LED(i, 0, 0, 0);
+//		  }
+//
+//		  WS2812_Send();
+//	  }
 
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 0, 0, 0);
-		  }
-
-		  WS2812_Send();
-	  }
-
+//	  void right_turn_signal() {
+//		  for (int j = 0; j < 3; j++) {
+//		  		  for (int i = 0; i < 30; i++) {
+//		  			  Set_LED(i, 150, 40, 70);
+//		  			  Set_Brightness(45);
+//		  			  WS2812_Send();
+//		  			  HAL_Delay(20);
+//		  		  }
+//
+//		  		  for (int i = 0; i < 30; i++) {
+//		  			  Set_LED(i, 0, 0, 0);
+//		  		  }
+//
+//		  		  WS2812_Send();
+//		  	  }
+//	  }
 
 	  // pause
-	  for (int i = 0; i < 30; i++) {
-		  Set_LED(i, 0, 0, 0);
-	  }
-
-	  WS2812_Send();
-	  HAL_Delay(500);
+//	  for (int i = 0; i < 30; i++) {
+//		  Set_LED(i, 0, 0, 0);
+//	  }
+//
+//	  WS2812_Send();
+//	  HAL_Delay(500);
 
 
 	  // attention blinking
-	  for (int j = 0; j < 5; j++) {
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 139, 0, 0);
-			  Set_Brightness(45);
-		  }
+//	  for (int j = 0; j < 5; j++) {
+//		  for (int i = 0; i < 30; i++) {
+//			  Set_LED(i, 139, 0, 0);
+//			  Set_Brightness(45);
+//		  }
+//
+//		  WS2812_Send();
+//		  HAL_Delay(350);
+//
+//		  for (int i = 0; i < 30; i++) {
+//			  Set_LED(i, 0, 0, 0);
+//		  }
+//
+//		  WS2812_Send();
+//		  HAL_Delay(350);
+//	  }
 
-		  WS2812_Send();
-		  HAL_Delay(350);
+	  void attention_blinking() {
+			  for (int i = 0; i < 30; i++) {
+				  Set_LED(i, 139, 0, 0);
+				  Set_Brightness(45);
+			  }
 
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 0, 0, 0);
-		  }
+			  WS2812_Send();
+			  HAL_Delay(700);
 
-		  WS2812_Send();
-		  HAL_Delay(350);
-	  }
+			  for (int i = 0; i < 30; i++) {
+				  Set_LED(i, 0, 0, 0);
+			  }
+
+			  WS2812_Send();
+			  HAL_Delay(550);
+
+		  };
 
 
 	  // pause
-	  for (int i = 0; i < 30; i++) {
-		  Set_LED(i, 0, 0, 0);
-	  }
-
-	  WS2812_Send();
-	  HAL_Delay(500);
+//	  for (int i = 0; i < 30; i++) {
+//		  Set_LED(i, 0, 0, 0);
+//	  }
+//
+//	  WS2812_Send();
+//	  HAL_Delay(500);
 
 	  // left turn signal
-	  for (int j = 0; j < 3; j++) {
-		  for (int i = 29; i >= 0; i--) {
-			  Set_LED(i, 255, 40, 0);
-			  Set_Brightness(45);
-			  WS2812_Send();
-			  HAL_Delay(20);
-		  }
+//	  for (int j = 0; j < 3; j++) {
+//		  for (int i = 29; i >= 0; i--) {
+//			  Set_LED(i, 255, 40, 0);
+//			  Set_Brightness(45);
+//			  WS2812_Send();
+//			  HAL_Delay(20);
+//		  }
+//
+//		  for (int i = 0; i < 30; i++) {
+//			  Set_LED(i, 0, 0, 0);
+//		  }
+//
+//		  WS2812_Send();
+//	  }
 
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 0, 0, 0);
-		  }
 
-		  WS2812_Send();
-	  }
 
+	  //1 - RIGHT
+	  //-1  - LEFT
+
+
+	  void turn_signal(int num, int direction) {
+
+		  int counter = 0;
+		  int led_num = direction == -1 ? num: 0;
+
+		  while (counter != num) {
+			Set_LED(led_num, 255, 30, 0);
+			Set_Brightness(45);
+			WS2812_Send();
+			HAL_Delay(30);
+			led_num += direction;
+			counter++;
+		};
+
+		 for (int i = 0; i < 30; i++) {
+		 	Set_LED(i, 0, 0, 0);
+		 }
+
+		 HAL_Delay(80);
+		 WS2812_Send();
+	  };
+
+//	  attention_blinking();
+	  turn_signal(30, 1);
 
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
