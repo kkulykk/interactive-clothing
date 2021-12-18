@@ -35,7 +35,21 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_hcd.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h ../Core/Inc/adc.h \
  ../Core/Inc/main.h ../Core/Inc/dma.h ../Core/Inc/i2c.h ../Core/Inc/spi.h \
- ../Core/Inc/tim.h ../USB_HOST/App/usb_host.h ../Core/Inc/gpio.h
+ ../Core/Inc/tim.h ../USB_HOST/App/usb_host.h ../Core/Inc/gpio.h \
+ ../Core/Inc/lcd5110.h ../Core/Inc/lcd5110_ll.h ../Core/Inc/spi.h \
+ ../Core/Inc/gpio.h ../Core/Inc/lcd5110_hal.h \
+ ../Core/Inc/stm32f411e_discovery_accelerometer.h \
+ ../Core/Inc/stm32f411e_discovery.h \
+ ../Core/Inc/../Components/lsm303dlhc/lsm303dlhc.h \
+ ../Core/Inc/../Components/lsm303dlhc/../Common/accelero.h \
+ ../Core/Inc/../Components/lsm303agr/lsm303agr.h \
+ ../Core/Inc/../Components/lsm303agr/../Common/accelero.h \
+ ../Core/Inc/stm32f411e_discovery_gyroscope.h \
+ ../Core/Inc/../Components/l3gd20/l3gd20.h \
+ ../Core/Inc/../Components/l3gd20/../Common/gyro.h \
+ ../Core/Inc/../Components/i3g4250d/i3g4250d.h \
+ ../Core/Inc/../Components/i3g4250d/../Common/gyro.h \
+ ../Core/Inc/stm32f411e_discovery.h
 
 ../Core/Inc/main.h:
 
@@ -124,3 +138,37 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../USB_HOST/App/usb_host.h:
 
 ../Core/Inc/gpio.h:
+
+../Core/Inc/lcd5110.h:
+
+../Core/Inc/lcd5110_ll.h:
+
+../Core/Inc/spi.h:
+
+../Core/Inc/gpio.h:
+
+../Core/Inc/lcd5110_hal.h:
+
+../Core/Inc/stm32f411e_discovery_accelerometer.h:
+
+../Core/Inc/stm32f411e_discovery.h:
+
+../Core/Inc/../Components/lsm303dlhc/lsm303dlhc.h:
+
+../Core/Inc/../Components/lsm303dlhc/../Common/accelero.h:
+
+../Core/Inc/../Components/lsm303agr/lsm303agr.h:
+
+../Core/Inc/../Components/lsm303agr/../Common/accelero.h:
+
+../Core/Inc/stm32f411e_discovery_gyroscope.h:
+
+../Core/Inc/../Components/l3gd20/l3gd20.h:
+
+../Core/Inc/../Components/l3gd20/../Common/gyro.h:
+
+../Core/Inc/../Components/i3g4250d/i3g4250d.h:
+
+../Core/Inc/../Components/i3g4250d/../Common/gyro.h:
+
+../Core/Inc/stm32f411e_discovery.h:

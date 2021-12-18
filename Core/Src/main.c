@@ -30,6 +30,12 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "math.h"
+#include <stdbool.h>
+#include "lcd5110.h"
+#include "stm32f411e_discovery_accelerometer.h"
+#include "stm32f411e_discovery_gyroscope.h"
+#include "stm32f411e_discovery.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,11 +64,14 @@ void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
 
+volatile int fall_down = 0;
 volatile int light = 0;
 volatile int pressed = 0; // Ініціалізується нулем по замовчуванню, але так гарніше
 volatile int button_is_pressed = 0;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+
+
  if( GPIO_Pin == GPIO_PIN_8)
  {
   static uint32_t last_change_tick;
@@ -139,6 +148,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+LCD5110_display lcd1;
+
+
 
 #define MAX_LED 26 // max LEDs that we have in a cascade
 #define USE_BRIGHTNESS 0
@@ -359,18 +371,46 @@ int main(void)
   MX_USB_HOST_Init();
   MX_TIM1_Init();
   MX_ADC1_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
 
+  lcd1.hw_conf.spi_handle = &hspi2;
+  lcd1.hw_conf.spi_cs_pin =  LCD1_CS_Pin;
+  lcd1.hw_conf.spi_cs_port = LCD1_CS_GPIO_Port;
+  lcd1.hw_conf.rst_pin =  LCD1_RST_Pin;
+  lcd1.hw_conf.rst_port = LCD1_RST_GPIO_Port;
+  lcd1.hw_conf.dc_pin =  LCD1_DC_Pin;
+  lcd1.hw_conf.dc_port = LCD1_DC_GPIO_Port;
+  lcd1.def_scr = lcd5110_def_scr;
+  LCD5110_init(&lcd1.hw_conf, LCD5110_NORMAL_MODE, 0x40, 2, 3);
 
-//  Set_LED(0, 254, 0, 0);
-//  WS2812_Send();
+  LCD5110_print("Hello world!\n", BLACK, &lcd1);
 
-  int mode = 0;
+  if(BSP_ACCELERO_Init() != HAL_OK)
+  {
+    /* Initialization Error */
+	  LCD5110_print("Error initializing HAL.", BLACK, &lcd1);
+    while(1){}
+  }
+
+  if(BSP_GYRO_Init() != HAL_OK){
+	  /* Initialization Error */
+	  	  LCD5110_print("Error initializing HAL.", BLACK, &lcd1);
+	      while(1){}
+  }
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  int16_t buffer[3] = {0};
+    float data[3] = {0};
+
+   int fall_down = 0;
+
+
   while (1)
   {
 //	 if ( HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_8) == GPIO_PIN_RESET )
@@ -409,11 +449,105 @@ int main(void)
 	 }
 
 	 if (light == 2) {
-		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
 		 HAL_Delay(200);
-		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
 		 warning_signal();
 	 }
+
+	   void show_accelerometer(){
+//		   while(1) {
+		   BSP_ACCELERO_GetXYZ(buffer);
+		   double x = (buffer[0]/16)/1000.0;
+		   double y = (double)(buffer[1]/16)/1000.0;
+		   double z = (double)(buffer[2]/16)/1000.0;
+		   double length = pow((x*x + y*y + z*z), 0.5);
+
+		   if (fabs(z) > 0.85 ||  fabs(x) > 0.8) {
+			   fall_down = 1;
+			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+
+		   }
+//		   else {
+//			   fall_down = 0;
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
+//		   }
+		  LCD5110_print("Accelerometer\n", BLACK, &lcd1);
+		  LCD5110_printf(&lcd1, BLACK, "X: %g \n Y: %g \n Z: %g \n", x, y, z);
+		  LCD5110_printf(&lcd1, BLACK, "length: %g \n", length);
+		  HAL_Delay(100);
+		  LCD5110_clear_scr(&lcd1);
+//		  if ( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET )
+//		     {break;
+//		     	while( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET )
+//		     	{}
+//		     	HAL_Delay(50);
+//		     }
+//	   }
+	   };
+
+//	   void show_gyroscope() {
+//		   while(1){
+//		   BSP_GYRO_GetXYZ(data);
+//		   double x = data[0]/1000;
+//		   double y = data[1]/1000;
+//		   double z = data[2]/1000;
+//		   double length = pow((x*x + y*y + z*z), 0.5);
+//		   LCD5110_print("Gyroscope\n", BLACK, &lcd1);
+//		   LCD5110_printf(&lcd1, BLACK, "X: %g \n Y: %g \n Z: %g \n", x, y, z);
+//		   LCD5110_printf(&lcd1, BLACK, "length: %g \n", length);
+//		   HAL_Delay(100);
+//		   LCD5110_clear_scr(&lcd1);
+//		   if ( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET )
+//		   		     {break;
+//		   		  	while( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET )
+//		   		  	{}
+//		   		  	HAL_Delay(50);}
+//	   }
+//	   };
+
+
+	   	   show_accelerometer();
+//	   	   show_gyroscope();
+	   	   while( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET )
+	   	   		     	{}
+	   	   		     	HAL_Delay(50);
+
+
+
+	   	if (fall_down == 1) {
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+	   	}
+
+	   	if (fall_down == 0) {
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
+		   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
+	   	}
+
+//		 if ( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET )
+//		 {
+//			 			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+//			 			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+//			 			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+//			 			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+//		 } else {
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
+//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
+//
+//		 }
 
 
 

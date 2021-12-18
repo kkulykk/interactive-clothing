@@ -16,6 +16,30 @@ RM := rm -rf
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
+-include Core/Components/wm8994/subdir.mk
+-include Core/Components/ts3510/subdir.mk
+-include Core/Components/stmpe811/subdir.mk
+-include Core/Components/stmpe1600/subdir.mk
+-include Core/Components/st7789h2/subdir.mk
+-include Core/Components/st7735/subdir.mk
+-include Core/Components/s5k5cag/subdir.mk
+-include Core/Components/ov5640/subdir.mk
+-include Core/Components/ov2640/subdir.mk
+-include Core/Components/otm8009a/subdir.mk
+-include Core/Components/nt35510/subdir.mk
+-include Core/Components/mfxstm32l152/subdir.mk
+-include Core/Components/lsm303dlhc/subdir.mk
+-include Core/Components/lsm303agr/subdir.mk
+-include Core/Components/ls016b8uy/subdir.mk
+-include Core/Components/lis3dsh/subdir.mk
+-include Core/Components/lis302dl/subdir.mk
+-include Core/Components/l3gd20/subdir.mk
+-include Core/Components/ili9341/subdir.mk
+-include Core/Components/ili9325/subdir.mk
+-include Core/Components/i3g4250d/subdir.mk
+-include Core/Components/ft6x06/subdir.mk
+-include Core/Components/exc7200/subdir.mk
+-include Core/Components/cs43l22/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -66,7 +90,7 @@ main-build: project_version2.elf secondary-outputs
 
 # Tool invocations
 project_version2.elf: $(OBJS) $(USER_OBJS) /Users/romankulyk/Documents/POC/interactive-clothing/STM32F411VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "project_version2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/romankulyk/Documents/POC/interactive-clothing/STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="project_version2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "project_version2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/romankulyk/Documents/POC/interactive-clothing/STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="project_version2.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
