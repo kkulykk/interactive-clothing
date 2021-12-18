@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "dma.h"
 #include "i2c.h"
 #include "spi.h"
@@ -57,12 +58,89 @@ void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
 
+volatile int light = 0;
+volatile int pressed = 0; // Ініціалізується нулем по замовчуванню, але так гарніше
+volatile int button_is_pressed = 0;
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+ if( GPIO_Pin == GPIO_PIN_8)
+ {
+  static uint32_t last_change_tick;
+  if( HAL_GetTick() - last_change_tick < 50 )
+  {
+   return;
+  }
+  last_change_tick = HAL_GetTick();
+  if(button_is_pressed)
+  {
+   button_is_pressed = 0;
+   ++pressed;
+	  if (light == -1) {
+		light = 0;
+	  } else {
+		light = -1;
+	  }
+  }else
+  {
+   button_is_pressed = 1;
+  }
+ }
+
+ if( GPIO_Pin == GPIO_PIN_9)
+ {
+  static uint32_t last_change_tick;
+  if( HAL_GetTick() - last_change_tick < 50 )
+  {
+   return;
+  }
+  last_change_tick = HAL_GetTick();
+  if(button_is_pressed)
+  {
+   button_is_pressed = 0;
+   ++pressed;
+	  if (light == 1) {
+		light = 0;
+	  } else {
+		light = 1;
+	  }
+  }else
+  {
+   button_is_pressed = 1;
+  }
+ }
+
+ if( GPIO_Pin == GPIO_PIN_10)
+ {
+  static uint32_t last_change_tick;
+  if( HAL_GetTick() - last_change_tick < 50 )
+  {
+   return;
+  }
+  last_change_tick = HAL_GetTick();
+  if(button_is_pressed)
+  {
+   button_is_pressed = 0;
+   ++pressed;
+	  if (light == 2) {
+		light = 0;
+	  } else {
+		light = 2;
+	  }
+  }else
+  {
+   button_is_pressed = 1;
+  }
+ }
+
+
+}
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#define MAX_LED 30 // max LEDs that we have in a cascade
+#define MAX_LED 26 // max LEDs that we have in a cascade
 #define USE_BRIGHTNESS 0
 
 
@@ -159,6 +237,101 @@ void WS2812_Send (void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	  void attention_signal() {
+			  for (int i = 0; i < 30; i++) {
+				  Set_LED(i, 139, 0, 0);
+				  Set_Brightness(45);
+			  }
+
+			  WS2812_Send();
+			  HAL_Delay(700);
+
+			  for (int i = 0; i < 30; i++) {
+				  Set_LED(i, 0, 0, 0);
+			  }
+
+			  WS2812_Send();
+			  HAL_Delay(550);
+
+		  };
+
+	  void turn_signal(int direction) {
+		  int mid = MAX_LED / 2;
+
+		  if (direction == -1){
+	 		    for (int i = mid; i >= 0; i--) {
+					Set_LED(i, 255, 69, 0);
+					Set_Brightness(45);
+					WS2812_Send();
+					HAL_Delay(30);
+			    }
+		  }
+
+		  if (direction == 1){
+	 		    for (int i = mid; i < MAX_LED; i++) {
+					Set_LED(i, 255, 69, 0);
+					Set_Brightness(45);
+					WS2812_Send();
+					HAL_Delay(30);
+			    }
+		  }
+
+
+		 for (int i = 0; i < MAX_LED; i++) {
+		 	Set_LED(i, 0, 0, 0);
+		 }
+
+		 HAL_Delay(120);
+		 WS2812_Send();
+	  };
+
+
+	  void warning_signal() {
+		  int mid = MAX_LED / 2;
+
+			for (int i = 0; i <= mid; i++) {
+				Set_LED(mid + i, 255, 69, 0);
+				Set_LED(mid - i, 255, 69, 0);
+				Set_Brightness(45);
+				WS2812_Send();
+				HAL_Delay(30);
+
+			}
+
+		 for (int i = 0; i < MAX_LED; i++) {
+		 	Set_LED(i, 0, 0, 0);
+		 }
+
+		 HAL_Delay(120);
+		 WS2812_Send();
+	  };
+
+
+//	  void turn_signal(int num, int direction) {
+//
+//		  int counter = 0;
+//		  int led_num = direction == -1 ? num: 0;
+//
+//		  while (counter != num) {
+//			Set_LED(led_num, 255, 30, 0);
+//			Set_Brightness(45);
+//			WS2812_Send();
+//			HAL_Delay(30);
+//			led_num += direction;
+//			counter++;
+//		};
+//
+//		 for (int i = 0; i < 30; i++) {
+//		 	Set_LED(i, 0, 0, 0);
+//		 }
+//
+//		 HAL_Delay(80);
+//		 WS2812_Send();
+//	  };
+
+
+
+
 
   /* USER CODE END 1 */
 
@@ -185,6 +358,7 @@ int main(void)
   MX_DMA_Init();
   MX_USB_HOST_Init();
   MX_TIM1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -192,147 +366,66 @@ int main(void)
 //  Set_LED(0, 254, 0, 0);
 //  WS2812_Send();
 
+  int mode = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  int pos = 0;
   while (1)
   {
-
-	  // right turn signal
-//	  for (int j = 0; j < 3; j++) {
-//		  for (int i = 0; i < 30; i++) {
-//			  Set_LED(i, 150, 40, 70);
-//			  Set_Brightness(45);
-//			  WS2812_Send();
-//			  HAL_Delay(20);
-//		  }
-//
-//		  for (int i = 0; i < 30; i++) {
-//			  Set_LED(i, 0, 0, 0);
-//		  }
-//
-//		  WS2812_Send();
+//	 if ( HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_8) == GPIO_PIN_RESET )
+//	 {
+//	  if (light == 1) {
+//		light = 0;
+//	  } else {
+//		light = 1;
 //	  }
+//	HAL_Delay(50);
+//	while( HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_8) == GPIO_PIN_RESET )
+//	{}
+//	HAL_Delay(50);
+//	 }
 
-//	  void right_turn_signal() {
-//		  for (int j = 0; j < 3; j++) {
-//		  		  for (int i = 0; i < 30; i++) {
-//		  			  Set_LED(i, 150, 40, 70);
-//		  			  Set_Brightness(45);
-//		  			  WS2812_Send();
-//		  			  HAL_Delay(20);
-//		  		  }
-//
-//		  		  for (int i = 0; i < 30; i++) {
-//		  			  Set_LED(i, 0, 0, 0);
-//		  		  }
-//
-//		  		  WS2812_Send();
-//		  	  }
-//	  }
-
-	  // pause
-//	  for (int i = 0; i < 30; i++) {
-//		  Set_LED(i, 0, 0, 0);
-//	  }
-//
-//	  WS2812_Send();
-//	  HAL_Delay(500);
-
-
-	  // attention blinking
-//	  for (int j = 0; j < 5; j++) {
-//		  for (int i = 0; i < 30; i++) {
-//			  Set_LED(i, 139, 0, 0);
-//			  Set_Brightness(45);
-//		  }
-//
-//		  WS2812_Send();
-//		  HAL_Delay(350);
-//
-//		  for (int i = 0; i < 30; i++) {
-//			  Set_LED(i, 0, 0, 0);
-//		  }
-//
-//		  WS2812_Send();
-//		  HAL_Delay(350);
-//	  }
-
-	  void attention_blinking() {
-			  for (int i = 0; i < 30; i++) {
-				  Set_LED(i, 139, 0, 0);
-				  Set_Brightness(45);
-			  }
-
-			  WS2812_Send();
-			  HAL_Delay(700);
-
-			  for (int i = 0; i < 30; i++) {
-				  Set_LED(i, 0, 0, 0);
-			  }
-
-			  WS2812_Send();
-			  HAL_Delay(550);
-
-		  };
-
-
-	  // pause
-//	  for (int i = 0; i < 30; i++) {
-//		  Set_LED(i, 0, 0, 0);
-//	  }
-//
-//	  WS2812_Send();
-//	  HAL_Delay(500);
-
-	  // left turn signal
-//	  for (int j = 0; j < 3; j++) {
-//		  for (int i = 29; i >= 0; i--) {
-//			  Set_LED(i, 255, 40, 0);
-//			  Set_Brightness(45);
-//			  WS2812_Send();
-//			  HAL_Delay(20);
-//		  }
-//
-//		  for (int i = 0; i < 30; i++) {
-//			  Set_LED(i, 0, 0, 0);
-//		  }
-//
-//		  WS2812_Send();
-//	  }
-
-
-
-	  //1 - RIGHT
-	  //-1  - LEFT
-
-
-	  void turn_signal(int num, int direction) {
-
-		  int counter = 0;
-		  int led_num = direction == -1 ? num: 0;
-
-		  while (counter != num) {
-			Set_LED(led_num, 255, 30, 0);
-			Set_Brightness(45);
-			WS2812_Send();
-			HAL_Delay(30);
-			led_num += direction;
-			counter++;
-		};
-
-		 for (int i = 0; i < 30; i++) {
-		 	Set_LED(i, 0, 0, 0);
+	 if (light == 0){
+			 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+			 HAL_Delay(200);
+			 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
+			 attention_signal();
 		 }
 
-		 HAL_Delay(80);
-		 WS2812_Send();
-	  };
+	 if (light == 1) {
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+		 HAL_Delay(200);
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
+//		 warning_signal();
+		 turn_signal(1);
+	 }
 
-//	  attention_blinking();
-	  turn_signal(30, 1);
+	 if (light == -1) {
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+		 HAL_Delay(200);
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
+		 turn_signal(-1);
+	 }
+
+	 if (light == 2) {
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+		 HAL_Delay(200);
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
+		 warning_signal();
+	 }
+
+
+
+
+
+
+//	   GPIO_PinState btnState = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_8);
+//	   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, btnState);
+
+//	  attention_signal();
+//	  turn_signal(-1);
+//	  warning_signal();
 
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();

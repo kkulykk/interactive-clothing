@@ -66,6 +66,7 @@ void Error_Handler(void);
 #define INT1_GPIO_Port GPIOE
 #define INT2_Pin GPIO_PIN_5
 #define INT2_GPIO_Port GPIOE
+#define INT2_EXTI_IRQn EXTI9_5_IRQn
 #define PC14_OSC32_IN_Pin GPIO_PIN_14
 #define PC14_OSC32_IN_GPIO_Port GPIOC
 #define PC15_OSC32_OUT_Pin GPIO_PIN_15
