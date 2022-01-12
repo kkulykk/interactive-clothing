@@ -89,8 +89,6 @@ void Error_Handler(void);
 #define SPI1_MOSI_GPIO_Port GPIOA
 #define LCD1_DC_Pin GPIO_PIN_1
 #define LCD1_DC_GPIO_Port GPIOB
-#define CLK_IN_Pin GPIO_PIN_10
-#define CLK_IN_GPIO_Port GPIOB
 #define LCD1_CS_Pin GPIO_PIN_14
 #define LCD1_CS_GPIO_Port GPIOB
 #define LD4_Pin GPIO_PIN_12
@@ -123,8 +121,6 @@ void Error_Handler(void);
 #define Audio_RST_GPIO_Port GPIOD
 #define OTG_FS_OverCurrent_Pin GPIO_PIN_5
 #define OTG_FS_OverCurrent_GPIO_Port GPIOD
-#define SWO_Pin GPIO_PIN_3
-#define SWO_GPIO_Port GPIOB
 #define Audio_SCL_Pin GPIO_PIN_6
 #define Audio_SCL_GPIO_Port GPIOB
 #define LCD1_RST_Pin GPIO_PIN_7
