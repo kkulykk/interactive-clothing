@@ -164,26 +164,30 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 LCD5110_display lcd1;
 
 volatile uint32_t tim10_overflows = 0;
-volatile float Ax, Ay, Az, Gx, Gy, Gz;
+volatile float Bx, By, Bz;
+volatile float Ax, Ay, Az;
+
+
 int datasentflag=0;
 
 uint8_t LED_Data[MAX_LED][4];
 uint8_t LED_Mod[MAX_LED][4];
 
-int16_t Accel_X_RAW = 0;
-int16_t Accel_Y_RAW = 0;
-int16_t Accel_Z_RAW = 0;
+int16_t Accel_X_RAW_B = 0;
+int16_t Accel_Y_RAW_B = 0;
+int16_t Accel_Z_RAW_B = 0;
 
-int16_t Gyro_X_RAW = 0;
-int16_t Gyro_Y_RAW = 0;
-int16_t Gyro_Z_RAW = 0;
+int16_t Accel_X_RAW_A = 0;
+int16_t Accel_Y_RAW_A = 0;
+int16_t Accel_Z_RAW_A = 0;
 
 
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
   if (htim -> Instance == TIM10) {
-	  MPU6050_Read_Accel();
+	  MPU6050_Read_Accel_A();
+	  MPU6050_Read_Accel_B();
 	  ++tim10_overflows;
   }
 
@@ -270,8 +274,7 @@ void WS2812_Send (void) {
 
 }
 
-
-void MPU6050_Init (void) {
+void MPU6050_Init_A(void) {
 
 	uint8_t check;
 	uint8_t Data;
@@ -300,7 +303,37 @@ void MPU6050_Init (void) {
 
 }
 
-void MPU6050_Read_Accel (void) {
+
+void MPU6050_Init_B(void) {
+
+	uint8_t check;
+	uint8_t Data;
+
+	HAL_I2C_Mem_Read (&hi2c2, MPU6050_ADDR,WHO_AM_I_REG,1, &check, 1, 1000);
+
+	if (check == 104) { // 0x68 will be returned by the sensor if everything goes well
+    // power management register 0X6B we should write all 0's to wake the sensor up
+		Data = 0;
+		HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, PWR_MGMT_1_REG, 1,&Data, 1, 1000);
+
+    // Set DATA RATE of 1KHz by writing SMPLRT_DIV register
+		Data = 0x07;
+		HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, SMPLRT_DIV_REG, 1, &Data, 1, 1000);
+
+    // Set accelerometer configuration in ACCEL_CONFIG Register
+    // XA_ST=0,YA_ST=0,ZA_ST=0, FS_SEL=0 -> � 2g
+		Data = 0x00;
+    	HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, ACCEL_CONFIG_REG, 1, &Data, 1, 1000);
+
+    // Set Gyroscopic configuration in GYRO_CONFIG Register
+    // XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=0 -> � 250 �/s
+    	Data = 0x00;
+    	HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, GYRO_CONFIG_REG, 1, &Data, 1, 1000);
+	}
+
+}
+
+void MPU6050_Read_Accel_A (void) {
 
 	uint8_t Rec_Data[6];
 
@@ -308,18 +341,43 @@ void MPU6050_Read_Accel (void) {
 
 	HAL_I2C_Mem_Read (&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, 1000);
 
-	Accel_X_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
-	Accel_Y_RAW = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
-	Accel_Z_RAW = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
+	Accel_X_RAW_A = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
+	Accel_Y_RAW_A = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
+	Accel_Z_RAW_A = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
 
 	/*** convert the RAW values into acceleration in 'g'
        we have to divide according to the Full scale value set in FS_SEL
        I have configured FS_SEL = 0. So I am dividing by 16384.0
        for more details check ACCEL_CONFIG Register              ****/
 
-	Ax = Accel_X_RAW/16384.0;
-	Ay = Accel_Y_RAW/16384.0;
-	Az = Accel_Z_RAW/16384.0;
+	Ax = Accel_X_RAW_A/16384.0;
+	Ay = Accel_Y_RAW_A/16384.0;
+	Az = Accel_Z_RAW_A/16384.0;
+
+	loop_counter++;
+
+}
+
+void MPU6050_Read_Accel_B (void) {
+
+	uint8_t Rec_Data[6];
+
+	// Read 6 BYTES of data starting from ACCEL_XOUT_H register
+
+	HAL_I2C_Mem_Read (&hi2c2, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, 1000);
+
+	Accel_X_RAW_B = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
+	Accel_Y_RAW_B = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
+	Accel_Z_RAW_B = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
+
+	/*** convert the RAW values into acceleration in 'g'
+       we have to divide according to the Full scale value set in FS_SEL
+       I have configured FS_SEL = 0. So I am dividing by 16384.0
+       for more details check ACCEL_CONFIG Register              ****/
+
+	Bx = Accel_X_RAW_B/16384.0;
+	By = Accel_Y_RAW_B/16384.0;
+	Bz = Accel_Z_RAW_B/16384.0;
 
 	loop_counter++;
 
@@ -332,8 +390,8 @@ void MPU6050_Read_Accel (void) {
   * @brief  The application entry point.
   * @retval int
   */
-
-int main(void) {
+int main(void)
+{
   /* USER CODE BEGIN 1 */
 	  void attention_signal() {
 
@@ -433,6 +491,7 @@ int main(void) {
   MX_ADC1_Init();
   MX_SPI2_Init();
   MX_TIM10_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -466,8 +525,10 @@ int main(void) {
 
   int16_t buffer[3] = {0};
 
-  MPU6050_Init();
+  MPU6050_Init_A();
+  MPU6050_Init_B();
   TIM10_reinit();
+  LCD5110_print("Hello world!\n", BLACK, &lcd1);
 
   while (1)
   {
@@ -547,11 +608,16 @@ int main(void) {
 		}
 
 //	 MPU6050_Read_Accel();
+//	 LCD5110_printf(&lcd1, BLACK, "Bx=%f \n", Bx);
+//	 LCD5110_printf(&lcd1, BLACK, "By=%f \n", By);
+//	 LCD5110_printf(&lcd1, BLACK, "Bz=%f \n", Bz);
+
 	 LCD5110_printf(&lcd1, BLACK, "Ax=%f \n", Ax);
 	 LCD5110_printf(&lcd1, BLACK, "Ay=%f \n", Ay);
 	 LCD5110_printf(&lcd1, BLACK, "Az=%f \n", Az);
-	 LCD5110_printf(&lcd1, BLACK, "Count=%i \n", loop_counter);
 
+	 LCD5110_printf(&lcd1, BLACK, "Count=%i \n", loop_counter);
+//
 	 LCD5110_clear_scr(&lcd1);
 
     /* USER CODE END WHILE */

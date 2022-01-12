@@ -89,8 +89,8 @@ all: main-build
 main-build: project_version2.elf secondary-outputs
 
 # Tool invocations
-project_version2.elf: $(OBJS) $(USER_OBJS) /Users/romankulyk/Documents/POC/interactive-clothing/STM32F411VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "project_version2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/romankulyk/Documents/POC/interactive-clothing/STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="project_version2.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+project_version2.elf: $(OBJS) $(USER_OBJS) /home/bohdanm/Documents/Studying_year_2/term_1/Subjects/Principles_of_computer_organization/project_v2/interactive-clothing/STM32F411VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "project_version2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/bohdanm/Documents/Studying_year_2/term_1/Subjects/Principles_of_computer_organization/project_v2/interactive-clothing/STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="project_version2.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
