@@ -82,63 +82,23 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
   last_change_tick = HAL_GetTick();
 
-  if (button_is_pressed) {
-	  button_is_pressed = 0;
-	  ++pressed;
-	  if (light == -1) {
-		  light = 0;
+  if (fall_down == 0) {
+	  if (button_is_pressed) {
+		  button_is_pressed = 0;
+		  ++pressed;
+		  if (light == -1) {
+			  light = 0;
+		  } else {
+			  light = -1;
+		  }
 	  } else {
-		  light = -1;
+		  button_is_pressed = 1;
 	  }
-  } else {
-	  button_is_pressed = 1;
   }
- }
 
-
- if (GPIO_Pin == GPIO_PIN_9) {
-
-	 static uint32_t last_change_tick;
-
-	 if( HAL_GetTick() - last_change_tick < 50) {
-		 return;
-	 }
-	 last_change_tick = HAL_GetTick();
-
-	 if (button_is_pressed)
-	 {
-	   button_is_pressed = 0;
-	   ++pressed;
-	   if (light == 1) {
-		   light = 0;
-	   } else {
-		   light = 1;
-	   }
-	 } else {
-		 button_is_pressed = 1;
-	 }
- }
-
- if (GPIO_Pin == GPIO_PIN_10) {
-	 static uint32_t last_change_tick;
-
-	 if (HAL_GetTick() - last_change_tick < 50) {
-		 return;
-	 }
-	 last_change_tick = HAL_GetTick();
-
-	 if (button_is_pressed) {
-		 button_is_pressed = 0;
-		 ++pressed;
-
-		 if (light == 2) {
-			 light = 0;
-		 } else {
-			 light = 2;
-		 }
-	 } else {
-		 button_is_pressed = 1;
-	 }
+  if (fall_down) {
+	  fall_down = 0;
+  }
  }
 }
 
@@ -182,6 +142,10 @@ int16_t Accel_X_RAW_L = 0;
 int16_t Accel_Y_RAW_L = 0;
 int16_t Accel_Z_RAW_L = 0;
 
+double Fall_Down_X = 0;
+double Fall_Down_Y = 0;
+double Fall_Down_Z = 0;
+
 
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
@@ -189,7 +153,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim -> Instance == TIM10) {
 	  MPU6050_Read_Accel_L();
 	  MPU6050_Read_Accel_R();
-	  ++tim10_overflows;
+	  show_accelerometer();
   }
 
 }
@@ -228,12 +192,10 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {  // callback w
 }
 
 void Set_LED (int LEDnum, int Red, int Green, int Blue) {
-
 	LED_Data[LEDnum][0] = LEDnum;
 	LED_Data[LEDnum][1] = Green;
 	LED_Data[LEDnum][2] = Red;
 	LED_Data[LEDnum][3] = Blue;
-
 }
 
 
@@ -354,9 +316,6 @@ void MPU6050_Read_Accel_L (void) {
 	Lx = Accel_X_RAW_L/16384.0;
 	Ly = Accel_Y_RAW_L/16384.0;
 	Lz = (Accel_Z_RAW_L/16384.0) - ACCEL_ERROR;
-
-	loop_counter++;
-
 }
 
 void MPU6050_Read_Accel_R (void) {
@@ -379,8 +338,23 @@ void MPU6050_Read_Accel_R (void) {
 	Rx = Accel_X_RAW_R/16384.0;
 	Ry = Accel_Y_RAW_R/16384.0;
 	Rz = Accel_Z_RAW_R/16384.0;
+}
 
-	loop_counter++;
+int16_t buffer[3] = {0};
+
+
+void show_accelerometer(void) {
+
+  BSP_ACCELERO_GetXYZ(buffer);
+	Fall_Down_X = (buffer[0]/16)/1000.0;
+	Fall_Down_Y = (double)(buffer[1]/16)/1000.0;
+	Fall_Down_Z = (double)(buffer[2]/16)/1000.0;
+
+  if (fabs(Fall_Down_Z) > 0.85 ||  fabs(Fall_Down_X) > 0.8) {
+	  fall_down = 1;
+  }
+
+  loop_counter++;
 
 }
 
@@ -521,10 +495,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-
-  int16_t buffer[3] = {0};
-
   MPU6050_Init_L();
   MPU6050_Init_R();
   TIM10_reinit();
@@ -532,101 +502,27 @@ int main(void)
 
   while (1)
   {
-	  //Button change modes method
-	//	 if ( HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_8) == GPIO_PIN_RESET )
-	//	 {
-	//	  if (light == 1) {
-	//		light = 0;
-	//	  } else {
-	//		light = 1;
-	//	  }
-	//	HAL_Delay(50);
-	//	while( HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_8) == GPIO_PIN_RESET )
-	//	{}
-	//	HAL_Delay(50);
-	//	 }
-
-	//	 if (light == 0){
-	//			 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
-	//			 HAL_Delay(200);
-	//			 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
-	//			 attention_signal();
-	//		 }
-	//
-	//	 if (light == 1) {
-	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-	//		 HAL_Delay(200);
-	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
-	////		 warning_signal();
-	//		 turn_signal(1);
-	//	 }
-	//
-	//	 if (light == -1) {
-	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
-	//		 HAL_Delay(200);
-	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
-	//		 turn_signal(-1);
-	//	 }
-	//
-		//	 if (light == 0){
-		//			 HAL_GPIO_WritePin(GP
-	//	 if (light == 2) {
-	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-	//		 HAL_Delay(200);
-	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
-	//		 warning_signal();
-	//	 }
-
-
-//	  void show_accelerometer() {
-//
-//		  BSP_ACCELERO_GetXYZ(buffer);
-//		  double x = (buffer[0]/16)/1000.0;
-//		  double y = (double)(buffer[1]/16)/1000.0;
-//		  double z = (double)(buffer[2]/16)/1000.0;
-//
-//		  if (fabs(z) > 0.85 ||  fabs(x) > 0.8) {
-//			  fall_down = 1;
-//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
-//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
-//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-//		  }
-//		   else {
-//			   fall_down = 0;
-//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
-//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
-//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
-//			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
-//		   }
-//		  };
-
-
-
-	  // add not on button_is_pressed
-
-//	  if (button_is_pressed) {
-//		  warning_signal();
-//	  } else {
-//		  attention_signal();
-//	  }
-	  if (Lz > 0.90 || Rx > 0.90) {
+	  if ((Lz > 0.90 || Rx > 0.90) & fall_down == 0) {
 		  turn_signal(1);
-	  } else if (Rz > 0.90 || Lx > 0.90) {
+	  } else if ((Rz > 0.90 || Lx > 0.90) & fall_down == 0) {
 		  turn_signal(-1);
 		} else if (button_is_pressed) {
+			warning_signal();
+		} else if (fall_down) {
 			warning_signal();
 		}
 	  else {
 			attention_signal();
 		}
 
-	 LCD5110_printf(&lcd1, BLACK, "Lx=%f \n", Lx);
-	 LCD5110_printf(&lcd1, BLACK, "Ly=%f \n", Ly);
-	 LCD5110_printf(&lcd1, BLACK, "Lz=%f \n", Lz);
+	 LCD5110_printf(&lcd1, BLACK, "Fx=%f \n", Fall_Down_X);
+	 LCD5110_printf(&lcd1, BLACK, "Fy=%f \n", Fall_Down_Y);
+	 LCD5110_printf(&lcd1, BLACK, "Fz=%f \n", Fall_Down_Z);
 
 
 	 LCD5110_printf(&lcd1, BLACK, "Count=%i \n", loop_counter);
+	 LCD5110_printf(&lcd1, BLACK, "Fall_Down=%i \n", fall_down);
+
 //
 	 LCD5110_clear_scr(&lcd1);
 
