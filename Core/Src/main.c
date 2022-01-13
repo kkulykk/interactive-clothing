@@ -150,6 +150,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 #define MAX_LED 26
 #define USE_BRIGHTNESS 0
 #define PI 3.14159265359
+#define ACCEL_ERROR 0.195;
 
 #define MPU6050_ADDR 0xD0
 #define SMPLRT_DIV_REG 0x19
@@ -164,8 +165,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 LCD5110_display lcd1;
 
 volatile uint32_t tim10_overflows = 0;
-volatile float Bx, By, Bz;
-volatile float Ax, Ay, Az;
+volatile float Rx, Ry, Rz;
+volatile float Lx, Ly, Lz;
 
 
 int datasentflag=0;
@@ -173,21 +174,21 @@ int datasentflag=0;
 uint8_t LED_Data[MAX_LED][4];
 uint8_t LED_Mod[MAX_LED][4];
 
-int16_t Accel_X_RAW_B = 0;
-int16_t Accel_Y_RAW_B = 0;
-int16_t Accel_Z_RAW_B = 0;
+int16_t Accel_X_RAW_R = 0;
+int16_t Accel_Y_RAW_R = 0;
+int16_t Accel_Z_RAW_R = 0;
 
-int16_t Accel_X_RAW_A = 0;
-int16_t Accel_Y_RAW_A = 0;
-int16_t Accel_Z_RAW_A = 0;
+int16_t Accel_X_RAW_L = 0;
+int16_t Accel_Y_RAW_L = 0;
+int16_t Accel_Z_RAW_L = 0;
 
 
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
   if (htim -> Instance == TIM10) {
-	  MPU6050_Read_Accel_A();
-	  MPU6050_Read_Accel_B();
+	  MPU6050_Read_Accel_L();
+	  MPU6050_Read_Accel_R();
 	  ++tim10_overflows;
   }
 
@@ -274,7 +275,7 @@ void WS2812_Send (void) {
 
 }
 
-void MPU6050_Init_A(void) {
+void MPU6050_Init_L(void) {
 
 	uint8_t check;
 	uint8_t Data;
@@ -304,7 +305,7 @@ void MPU6050_Init_A(void) {
 }
 
 
-void MPU6050_Init_B(void) {
+void MPU6050_Init_R(void) {
 
 	uint8_t check;
 	uint8_t Data;
@@ -333,7 +334,7 @@ void MPU6050_Init_B(void) {
 
 }
 
-void MPU6050_Read_Accel_A (void) {
+void MPU6050_Read_Accel_L (void) {
 
 	uint8_t Rec_Data[6];
 
@@ -341,24 +342,24 @@ void MPU6050_Read_Accel_A (void) {
 
 	HAL_I2C_Mem_Read (&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, 1000);
 
-	Accel_X_RAW_A = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
-	Accel_Y_RAW_A = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
-	Accel_Z_RAW_A = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
+	Accel_X_RAW_L = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
+	Accel_Y_RAW_L = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
+	Accel_Z_RAW_L = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
 
 	/*** convert the RAW values into acceleration in 'g'
        we have to divide according to the Full scale value set in FS_SEL
        I have configured FS_SEL = 0. So I am dividing by 16384.0
        for more details check ACCEL_CONFIG Register              ****/
 
-	Ax = Accel_X_RAW_A/16384.0;
-	Ay = Accel_Y_RAW_A/16384.0;
-	Az = Accel_Z_RAW_A/16384.0;
+	Lx = Accel_X_RAW_L/16384.0;
+	Ly = Accel_Y_RAW_L/16384.0;
+	Lz = (Accel_Z_RAW_L/16384.0) - ACCEL_ERROR;
 
 	loop_counter++;
 
 }
 
-void MPU6050_Read_Accel_B (void) {
+void MPU6050_Read_Accel_R (void) {
 
 	uint8_t Rec_Data[6];
 
@@ -366,18 +367,18 @@ void MPU6050_Read_Accel_B (void) {
 
 	HAL_I2C_Mem_Read (&hi2c2, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, 1000);
 
-	Accel_X_RAW_B = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
-	Accel_Y_RAW_B = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
-	Accel_Z_RAW_B = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
+	Accel_X_RAW_R = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
+	Accel_Y_RAW_R = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
+	Accel_Z_RAW_R = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
 
 	/*** convert the RAW values into acceleration in 'g'
        we have to divide according to the Full scale value set in FS_SEL
        I have configured FS_SEL = 0. So I am dividing by 16384.0
        for more details check ACCEL_CONFIG Register              ****/
 
-	Bx = Accel_X_RAW_B/16384.0;
-	By = Accel_Y_RAW_B/16384.0;
-	Bz = Accel_Z_RAW_B/16384.0;
+	Rx = Accel_X_RAW_R/16384.0;
+	Ry = Accel_Y_RAW_R/16384.0;
+	Rz = Accel_Z_RAW_R/16384.0;
 
 	loop_counter++;
 
@@ -448,7 +449,6 @@ int main(void)
 		  for (int i = 0; i <= mid; i++) {
 			  Set_LED(mid + i, 255, 69, 0);
 			  Set_LED(mid - i, 255, 69, 0);
-			  Set_Brightness(45);
 			  WS2812_Send();
 			  HAL_Delay(30);
 		  }
@@ -525,8 +525,8 @@ int main(void)
 
   int16_t buffer[3] = {0};
 
-  MPU6050_Init_A();
-  MPU6050_Init_B();
+  MPU6050_Init_L();
+  MPU6050_Init_R();
   TIM10_reinit();
   LCD5110_print("Hello world!\n", BLACK, &lcd1);
 
@@ -568,6 +568,8 @@ int main(void)
 	//		 turn_signal(-1);
 	//	 }
 	//
+		//	 if (light == 0){
+		//			 HAL_GPIO_WritePin(GP
 	//	 if (light == 2) {
 	//		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
 	//		 HAL_Delay(200);
@@ -576,20 +578,20 @@ int main(void)
 	//	 }
 
 
-	  void show_accelerometer() {
-
-		  BSP_ACCELERO_GetXYZ(buffer);
-		  double x = (buffer[0]/16)/1000.0;
-		  double y = (double)(buffer[1]/16)/1000.0;
-		  double z = (double)(buffer[2]/16)/1000.0;
-
-		  if (fabs(z) > 0.85 ||  fabs(x) > 0.8) {
-			  fall_down = 1;
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-		  }
+//	  void show_accelerometer() {
+//
+//		  BSP_ACCELERO_GetXYZ(buffer);
+//		  double x = (buffer[0]/16)/1000.0;
+//		  double y = (double)(buffer[1]/16)/1000.0;
+//		  double z = (double)(buffer[2]/16)/1000.0;
+//
+//		  if (fabs(z) > 0.85 ||  fabs(x) > 0.8) {
+//			  fall_down = 1;
+//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+//			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+//		  }
 //		   else {
 //			   fall_down = 0;
 //			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
@@ -597,24 +599,32 @@ int main(void)
 //			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
 //			   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
 //		   }
-		  };
+//		  };
 
-	  if (Az > 0.8) {
+
+
+	  // add not on button_is_pressed
+
+//	  if (button_is_pressed) {
+//		  warning_signal();
+//	  } else {
+//		  attention_signal();
+//	  }
+	  if (Lz > 0.90 || Rx > 0.90) {
 		  turn_signal(1);
-	  } else if (Ax > 0.8) {
+	  } else if (Rz > 0.90 || Lx > 0.90) {
 		  turn_signal(-1);
-		} else {
+		} else if (button_is_pressed) {
+			warning_signal();
+		}
+	  else {
 			attention_signal();
 		}
 
-//	 MPU6050_Read_Accel();
-//	 LCD5110_printf(&lcd1, BLACK, "Bx=%f \n", Bx);
-//	 LCD5110_printf(&lcd1, BLACK, "By=%f \n", By);
-//	 LCD5110_printf(&lcd1, BLACK, "Bz=%f \n", Bz);
+	 LCD5110_printf(&lcd1, BLACK, "Lx=%f \n", Lx);
+	 LCD5110_printf(&lcd1, BLACK, "Ly=%f \n", Ly);
+	 LCD5110_printf(&lcd1, BLACK, "Lz=%f \n", Lz);
 
-	 LCD5110_printf(&lcd1, BLACK, "Ax=%f \n", Ax);
-	 LCD5110_printf(&lcd1, BLACK, "Ay=%f \n", Ay);
-	 LCD5110_printf(&lcd1, BLACK, "Az=%f \n", Az);
 
 	 LCD5110_printf(&lcd1, BLACK, "Count=%i \n", loop_counter);
 //
