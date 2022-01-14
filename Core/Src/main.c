@@ -84,6 +84,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
   if (fall_down == 0) {
 	  if (button_is_pressed) {
+
 		  button_is_pressed = 0;
 		  ++pressed;
 		  if (light == -1) {
@@ -111,6 +112,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 #define USE_BRIGHTNESS 0
 #define PI 3.14159265359
 #define ACCEL_ERROR 0.195;
+
+#define RX_ACTIVE_BOUND 0.82
+#define RZ_ACTIVE_BOUND 0.82
+#define LX_ACTIVE_BOUND 0.82
+#define LZ_ACTIVE_BOUND 0.82
 
 #define MPU6050_ADDR 0xD0
 #define SMPLRT_DIV_REG 0x19
@@ -427,11 +433,15 @@ int main(void)
 			  HAL_Delay(30);
 		  }
 
+
 		 for (int i = 0; i < MAX_LED; i++) {
 		 	Set_LED(i, 0, 0, 0);
 		 }
 
+		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_SET);
 		 HAL_Delay(120);
+		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_RESET);
+
 		 WS2812_Send();
 
 	  };
@@ -498,13 +508,13 @@ int main(void)
   MPU6050_Init_L();
   MPU6050_Init_R();
   TIM10_reinit();
-  LCD5110_print("Hello world!\n", BLACK, &lcd1);
 
   while (1)
   {
-	  if ((Lz > 0.90 || Rx > 0.90) & fall_down == 0) {
+
+	  if ((Lz > LZ_ACTIVE_BOUND || Rx > RX_ACTIVE_BOUND) & fall_down == 0) {
 		  turn_signal(1);
-	  } else if ((Rz > 0.90 || Lx > 0.90) & fall_down == 0) {
+	  } else if ((Rz > RZ_ACTIVE_BOUND || Lx > LX_ACTIVE_BOUND) & fall_down == 0) {
 		  turn_signal(-1);
 		} else if (button_is_pressed) {
 			warning_signal();
@@ -514,17 +524,6 @@ int main(void)
 	  else {
 			attention_signal();
 		}
-
-	 LCD5110_printf(&lcd1, BLACK, "Fx=%f \n", Fall_Down_X);
-	 LCD5110_printf(&lcd1, BLACK, "Fy=%f \n", Fall_Down_Y);
-	 LCD5110_printf(&lcd1, BLACK, "Fz=%f \n", Fall_Down_Z);
-
-
-	 LCD5110_printf(&lcd1, BLACK, "Count=%i \n", loop_counter);
-	 LCD5110_printf(&lcd1, BLACK, "Fall_Down=%i \n", fall_down);
-
-//
-	 LCD5110_clear_scr(&lcd1);
 
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
