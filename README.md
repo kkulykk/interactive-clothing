@@ -18,7 +18,7 @@
         <br />
     <a href="https://github.com/kkulykk/interactive-clothing/">View Scheme</a>
     ·
-    <a href="https://github.com/kkulykk/interactive-clothing/">View Demo</a>
+    <a href="https://youtu.be/IGkJCaJ5748">View Demo</a>
     ·
     <a href="https://github.com/kkulykk/interactive-clothing/issues">Request Feature</a>
   </p>

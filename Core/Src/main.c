@@ -63,17 +63,63 @@ void SystemClock_Config(void);
 void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
-
 volatile int fall_down = 0;
 volatile int light = 0;
 volatile int pressed = 0;
 volatile int button_is_pressed = 0;
 volatile int loop_counter = 0;
+/* USER CODE END PFP */
 
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+#define MAX_LED 30
+#define USE_BRIGHTNESS 0
+#define ACCEL_ERROR 0.26; // to calibrate another accelerometer
+
+// bounds when turn lights trigger
+#define RX_ACTIVE_BOUND 0.82
+#define RZ_ACTIVE_BOUND 0.82
+#define LX_ACTIVE_BOUND 0.82
+#define LZ_ACTIVE_BOUND 0.82
+
+
+// accelerometer register map
+#define MPU6050_ADDR 0xD0
+#define SMPLRT_DIV_REG 0x19
+#define GYRO_CONFIG_REG 0x1B
+#define ACCEL_CONFIG_REG 0x1C
+#define ACCEL_XOUT_H_REG 0x3B
+#define TEMP_OUT_H_REG 0x41
+#define GYRO_XOUT_H_REG 0x43
+#define PWR_MGMT_1_REG 0x6B
+#define WHO_AM_I_REG 0x75
+
+LCD5110_display lcd1;
+volatile uint32_t tim10_overflows = 0;
+
+// final accelerometers results
+volatile float Rx, Ry, Rz;
+volatile float Lx, Ly, Lz;
+
+// stm internal accelerometer measures
+double Fall_Down_X = 0;
+double Fall_Down_Y = 0;
+double Fall_Down_Z = 0;
+
+int datasentflag=0;
+uint8_t LED_Data[MAX_LED][4];
+uint8_t LED_Mod[MAX_LED][4];
+
+int16_t Accel_X_RAW_R = 0;
+int16_t Accel_Y_RAW_R = 0;
+int16_t Accel_Z_RAW_R = 0;
+
+int16_t Accel_X_RAW_L = 0;
+int16_t Accel_Y_RAW_L = 0;
+int16_t Accel_Z_RAW_L = 0;
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-
- if (GPIO_Pin == GPIO_PIN_8) {
+ if (GPIO_Pin == GPIO_PIN_8) { // button on the case handling
 
   static uint32_t last_change_tick;
   if (HAL_GetTick() - last_change_tick < 50) {
@@ -103,98 +149,40 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  }
 }
 
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-#define MAX_LED 26
-#define USE_BRIGHTNESS 0
-#define PI 3.14159265359
-#define ACCEL_ERROR 0.195;
-
-#define RX_ACTIVE_BOUND 0.82
-#define RZ_ACTIVE_BOUND 0.82
-#define LX_ACTIVE_BOUND 0.82
-#define LZ_ACTIVE_BOUND 0.82
-
-#define MPU6050_ADDR 0xD0
-#define SMPLRT_DIV_REG 0x19
-#define GYRO_CONFIG_REG 0x1B
-#define ACCEL_CONFIG_REG 0x1C
-#define ACCEL_XOUT_H_REG 0x3B
-#define TEMP_OUT_H_REG 0x41
-#define GYRO_XOUT_H_REG 0x43
-#define PWR_MGMT_1_REG 0x6B
-#define WHO_AM_I_REG 0x75
-
-LCD5110_display lcd1;
-
-volatile uint32_t tim10_overflows = 0;
-volatile float Rx, Ry, Rz;
-volatile float Lx, Ly, Lz;
-
-
-int datasentflag=0;
-
-uint8_t LED_Data[MAX_LED][4];
-uint8_t LED_Mod[MAX_LED][4];
-
-int16_t Accel_X_RAW_R = 0;
-int16_t Accel_Y_RAW_R = 0;
-int16_t Accel_Z_RAW_R = 0;
-
-int16_t Accel_X_RAW_L = 0;
-int16_t Accel_Y_RAW_L = 0;
-int16_t Accel_Z_RAW_L = 0;
-
-double Fall_Down_X = 0;
-double Fall_Down_Y = 0;
-double Fall_Down_Z = 0;
-
-
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-
   if (htim -> Instance == TIM10) {
-	  MPU6050_Read_Accel_L();
-	  MPU6050_Read_Accel_R();
-	  show_accelerometer();
+	  // read accelerometers on timer tick
+	  MPU6050_Read_Accel_L(); // LEFT hand accelerometer
+	  MPU6050_Read_Accel_R(); // RIGHT hand accelerometer
+	  show_accelerometer(); // inner accelerometer
   }
-
 }
 
 static inline void TIM10_reinit() {
-
 	HAL_TIM_Base_Stop(&htim10);
 	__HAL_TIM_SET_COUNTER( &htim10, 0 );
 	tim10_overflows = 0;
 	HAL_TIM_Base_Start_IT(&htim10);
-
 }
 
 static inline uint32_t get_tim10_us() {
-
 	__HAL_TIM_DISABLE_IT(&htim10, TIM_IT_UPDATE);
 	uint32_t res = tim10_overflows * 10000 + __HAL_TIM_GET_COUNTER(&htim10);
 	__HAL_TIM_ENABLE_IT(&htim10, TIM_IT_UPDATE);
 	return res;
-
 }
 
 static inline void udelay_TIM10(uint32_t useconds) {
-
 	uint32_t before = get_tim10_us();
 
 	while( get_tim10_us() < before+useconds){}
-
 }
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {  // callback when dma finished data transfering
 
 	HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);  // stop dma, when data transfering has finished
 	datasentflag = 1;
-
 }
 
 void Set_LED (int LEDnum, int Red, int Green, int Blue) {
@@ -203,7 +191,6 @@ void Set_LED (int LEDnum, int Red, int Green, int Blue) {
 	LED_Data[LEDnum][2] = Red;
 	LED_Data[LEDnum][3] = Blue;
 }
-
 
 uint16_t pwmData[(24*MAX_LED)+50]; // 24 bits leds + 50 eset code
 
@@ -240,10 +227,10 @@ void WS2812_Send (void) {
 
 	while (!datasentflag){};  // set flag when data has been transmitted
 	datasentflag = 0;
-
 }
 
 void MPU6050_Init_L(void) {
+	/*** Code provided by© Controllerstech ****/
 
 	uint8_t check;
 	uint8_t Data;
@@ -269,40 +256,36 @@ void MPU6050_Init_L(void) {
     	Data = 0x00;
     	HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, GYRO_CONFIG_REG, 1, &Data, 1, 1000);
 	}
-
 }
 
 
 void MPU6050_Init_R(void) {
+	/*** Code provided by© Controllerstech ****/
+
 
 	uint8_t check;
 	uint8_t Data;
 
 	HAL_I2C_Mem_Read (&hi2c2, MPU6050_ADDR,WHO_AM_I_REG,1, &check, 1, 1000);
 
-	if (check == 104) { // 0x68 will be returned by the sensor if everything goes well
-    // power management register 0X6B we should write all 0's to wake the sensor up
+	if (check == 104) {
 		Data = 0;
 		HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, PWR_MGMT_1_REG, 1,&Data, 1, 1000);
 
-    // Set DATA RATE of 1KHz by writing SMPLRT_DIV register
 		Data = 0x07;
 		HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, SMPLRT_DIV_REG, 1, &Data, 1, 1000);
 
-    // Set accelerometer configuration in ACCEL_CONFIG Register
-    // XA_ST=0,YA_ST=0,ZA_ST=0, FS_SEL=0 -> � 2g
 		Data = 0x00;
     	HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, ACCEL_CONFIG_REG, 1, &Data, 1, 1000);
 
-    // Set Gyroscopic configuration in GYRO_CONFIG Register
-    // XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=0 -> � 250 �/s
     	Data = 0x00;
     	HAL_I2C_Mem_Write(&hi2c2, MPU6050_ADDR, GYRO_CONFIG_REG, 1, &Data, 1, 1000);
 	}
-
 }
 
 void MPU6050_Read_Accel_L (void) {
+	/*** Code provided by© Controllerstech ****/
+
 
 	uint8_t Rec_Data[6];
 
@@ -321,14 +304,13 @@ void MPU6050_Read_Accel_L (void) {
 
 	Lx = Accel_X_RAW_L/16384.0;
 	Ly = Accel_Y_RAW_L/16384.0;
-	Lz = (Accel_Z_RAW_L/16384.0) - ACCEL_ERROR;
+	Lz = (Accel_Z_RAW_L/16384.0) + ACCEL_ERROR;
 }
 
 void MPU6050_Read_Accel_R (void) {
+	/*** Code provided by© Controllerstech ****/
 
 	uint8_t Rec_Data[6];
-
-	// Read 6 BYTES of data starting from ACCEL_XOUT_H register
 
 	HAL_I2C_Mem_Read (&hi2c2, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, 1000);
 
@@ -336,18 +318,12 @@ void MPU6050_Read_Accel_R (void) {
 	Accel_Y_RAW_R = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
 	Accel_Z_RAW_R = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
 
-	/*** convert the RAW values into acceleration in 'g'
-       we have to divide according to the Full scale value set in FS_SEL
-       I have configured FS_SEL = 0. So I am dividing by 16384.0
-       for more details check ACCEL_CONFIG Register              ****/
-
 	Rx = Accel_X_RAW_R/16384.0;
 	Ry = Accel_Y_RAW_R/16384.0;
 	Rz = Accel_Z_RAW_R/16384.0;
 }
 
 int16_t buffer[3] = {0};
-
 
 void show_accelerometer(void) {
 
@@ -359,12 +335,76 @@ void show_accelerometer(void) {
   if (fabs(Fall_Down_Z) > 0.85 ||  fabs(Fall_Down_X) > 0.8) {
 	  fall_down = 1;
   }
-
-  loop_counter++;
-
 }
 
+void attention_signal() {
+	  for (int i = 0; i < 30; i++) {
+		  Set_LED(i, 139, 0, 0);
+	  }
 
+	  WS2812_Send();
+	  HAL_Delay(700);
+
+	  for (int i = 0; i < 30; i++) {
+		  Set_LED(i, 0, 0, 0);
+	  }
+
+	  WS2812_Send();
+	  HAL_Delay(550);
+};
+
+void turn_signal (int direction) {
+	  int mid = MAX_LED / 2;
+
+	  if (direction == -1) {
+		  for (int i = mid; i >= 0; i--) {
+			  Set_LED(i, 255, 69, 0);
+			  WS2812_Send();
+			  HAL_Delay(30);
+		  }
+	  }
+
+	  if (direction == 1) {
+		  for (int i = mid; i < MAX_LED; i++) {
+			  Set_LED(i, 255, 69, 0);
+			  WS2812_Send();
+			  HAL_Delay(30);
+		  }
+	  }
+
+	 for (int i = 0; i < MAX_LED; i++) {
+		 Set_LED(i, 0, 0, 0);
+	 }
+
+	 HAL_Delay(120);
+	 WS2812_Send();
+};
+
+
+void warning_signal() {
+	  int mid = MAX_LED / 2;
+
+	  for (int i = 0; i <= mid; i++) {
+		  Set_LED(mid + i, 255, 69, 0);
+		  Set_LED(mid - i, 255, 69, 0);
+		  WS2812_Send();
+		  HAL_Delay(30);
+	  }
+
+	 for (int i = 0; i < MAX_LED; i++) {
+	 	Set_LED(i, 0, 0, 0);
+	 }
+
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_SET);
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
+
+	 HAL_Delay(120);
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_RESET);
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
+
+
+	 WS2812_Send();
+};
 /* USER CODE END 0 */
 
 /**
@@ -374,77 +414,7 @@ void show_accelerometer(void) {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	  void attention_signal() {
 
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 139, 0, 0);
-		  }
-
-		  WS2812_Send();
-		  HAL_Delay(700);
-
-		  for (int i = 0; i < 30; i++) {
-			  Set_LED(i, 0, 0, 0);
-		  }
-
-		  WS2812_Send();
-		  HAL_Delay(550);
-
-	  };
-
-	  void turn_signal (int direction) {
-
-		  int mid = MAX_LED / 2;
-
-		  if (direction == -1) {
-			  for (int i = mid; i >= 0; i--) {
-				  Set_LED(i, 255, 69, 0);
-				  WS2812_Send();
-				  HAL_Delay(30);
-			  }
-		  }
-
-		  if (direction == 1) {
-			  for (int i = mid; i < MAX_LED; i++) {
-				  Set_LED(i, 255, 69, 0);
-				  WS2812_Send();
-				  HAL_Delay(30);
-			  }
-		  }
-
-		 for (int i = 0; i < MAX_LED; i++) {
-			 Set_LED(i, 0, 0, 0);
-		 }
-
-		 HAL_Delay(120);
-		 WS2812_Send();
-
-	  };
-
-
-	  void warning_signal() {
-
-		  int mid = MAX_LED / 2;
-
-		  for (int i = 0; i <= mid; i++) {
-			  Set_LED(mid + i, 255, 69, 0);
-			  Set_LED(mid - i, 255, 69, 0);
-			  WS2812_Send();
-			  HAL_Delay(30);
-		  }
-
-
-		 for (int i = 0; i < MAX_LED; i++) {
-		 	Set_LED(i, 0, 0, 0);
-		 }
-
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_SET);
-		 HAL_Delay(120);
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_RESET);
-
-		 WS2812_Send();
-
-	  };
 
 
   /* USER CODE END 1 */
@@ -505,24 +475,24 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   MPU6050_Init_L();
-  MPU6050_Init_R();
+//  MPU6050_Init_R();
   TIM10_reinit();
 
   while (1)
   {
-
-	  if ((Lz > LZ_ACTIVE_BOUND || Rx > RX_ACTIVE_BOUND) & fall_down == 0) {
+	  if ((Lz > LZ_ACTIVE_BOUND || Rx > RX_ACTIVE_BOUND) & fall_down == 0) { // conditions for left turn
 		  turn_signal(1);
-	  } else if ((Rz > RZ_ACTIVE_BOUND || Lx > LX_ACTIVE_BOUND) & fall_down == 0) {
+	  } else if ((Rz > RZ_ACTIVE_BOUND || Lx > LX_ACTIVE_BOUND) & fall_down == 0) { // conditions for right turn
 		  turn_signal(-1);
-		} else if (button_is_pressed) {
+		} else if (button_is_pressed) { // turn on warning signal on button click
 			warning_signal();
-		} else if (fall_down) {
+		} else if (fall_down) { // turn on warning signal if user fell down
 			warning_signal();
 		}
 	  else {
-			attention_signal();
+			attention_signal(); // standard attention blinking in rest position
 		}
 
     /* USER CODE END WHILE */
